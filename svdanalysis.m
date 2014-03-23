@@ -1,4 +1,4 @@
-function [svalue,svectors] = svdanalysis(data)
+function [svalue,svectors,data] = svdanalysis(data,swClean)
 %SVDANALYSIS process DATA with normal SVD analysis. Which contains data
 % clean, singular decomposition, and resort singular vector according to
 % singular value in decreasing order.
@@ -11,13 +11,20 @@ function [svalue,svectors] = svdanalysis(data)
 % See also, svdcompress, svddisp.
 %
 % MooGu Z. <hzhu@case.edu>
-% Jan 30th, 2014 - Version 0.1
+% Jan 30, 2014 - Version 0.1
+% Mar 14, 2014 - Version 0.1.1
+%   - Add input argument to select whether or not clean the data
 
-% Clear Data to Remove NaNs
-data = data(:,~any(isnan(data)));
+if ~exist('swClean','var')
+    swClean = false;
+end
 
-% Centralize the Data
-data = bsxfun(@minus,data,mean(data,2));
+if swClean
+    % Clear Data to Remove NaNs
+    data = data(:,~any(isnan(data)));
+    % Centralize the Data
+    data = bsxfun(@minus,data,mean(data,2));
+end
 
 % Singular Value Decomposition
 [U,S,~] = svd(data,'econ');

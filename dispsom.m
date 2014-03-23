@@ -1,7 +1,13 @@
 function dispsom(map,mlabel,dlabel,clabel,ftitle)
+% DISPSOM show som map
+% 
+% usage : dispsom(map,mlabel,dlabel,clabel,ftitle)
+% 
+% MooGu Z. <hzhu@case.edu>
+% Mar. 17, 2014
 
 % Function Switchers
-swPrint = true;
+swPrint = false;
 swClsfr = exist('clabel','var') && ~isempty(clabel);
 
 % Estimate Minimum Distance between Map Points
