@@ -1,6 +1,19 @@
 function [map_label,proto] = som(data,map,param)
+% SOM learn a map that trying to catch high dimensional space data point
+%
+%   [map_label,proto] = som(data,map,param)
+%
+% MooGu Z. <hzhu@case.edu>
+% March 23, 2014
 
-% Function Switchers
+% Defualt Setting
+if ~exist('param','var')
+    param.learning_rate = .3;
+    param.sigma = .7;
+    param.niter = 17;
+end
+
+% Switch for initializing prototypes with specified positions
 swSpInit = isfield(param,'init') && ~isempty(param.init);
 
 [d,nsample] = size(data);
@@ -9,7 +22,7 @@ swSpInit = isfield(param,'init') && ~isempty(param.init);
 lrate = param.learning_rate; % Learning Rate
 
 % Define Connective Tightness Function
-G = @(sigma,xsquare)(exp(-1/(2*sigma^2)*xsquare));
+G = @(sigma,xsquare)(exp(-xsquare/(2*sigma^2)));
 s = param.sigma; % Sigma for Gaussion Distribution
 
 % Initialize Prototypes in Space

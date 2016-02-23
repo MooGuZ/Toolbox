@@ -46,7 +46,7 @@ axis([0,rank+1,0,max(s)*1.1]);
 xlabel('INDEX'); ylabel('Singular Value');
 title('Singular Value Map'); hold off;
 if swPrint
-    print(f,'-depsc2','-r200',[figpath,'svmap-',datestr(now),'.eps']);
+    print(f,'-depsc2','-r200',[figpath,'svd-svmap.eps']);
 end
 
 % Cumulate Energy Proportion
@@ -63,7 +63,7 @@ axis([0,rank+1,0,1.1]);
 xlabel('INDEX'); ylabel('Cumulative Energy');
 title('Cumulative Energy Map'); hold off;
 if swPrint
-    print(f,'-depsc2','-r200',[figpath,'cemap-',datestr(now),'.eps']);
+    print(f,'-depsc2','-r200',[figpath,'svd-cemap.eps']);
 end
 
 % Projection in Singular Vectors Space
@@ -77,7 +77,7 @@ for i = 1 : rank
     xlabel(['SVector No.',num2str(i),' (SValue=',num2str(s(i)),')']);
     if swPrint
         print(f,'-depsc2','-r200',...
-            [figpath,'svddisp-D',num2str(i),'-',datestr(now),'.eps']);
+            [figpath,'svddisp-D',num2str(i),'.eps']);
     end
 end
 
@@ -111,7 +111,7 @@ if (rank > 1)
         if swPrint
             print(f,'-depsc2','-r200',...
                 [figpath,'svddisp-D',num2str(perm(1,i)),...
-                'D',num2str(perm(2,i)),'-',datestr(now),'.eps']);
+                'D',num2str(perm(2,i)),'.eps']);
         end
     end
 end
@@ -125,7 +125,7 @@ if (rank > 2)
     title('Most Significant Projections of Data');
     if swPrint
         print(f,'-depsc2','-r200',...
-            [figpath,'svddisp-3D-0deg-',datestr(now),'.eps']);
+            [figpath,'svddisp-3D-0deg.eps']);
     end
     % Rotating
     for i = 1 : floor(359/rot)
@@ -133,7 +133,7 @@ if (rank > 2)
         title(['Most Significant Projections of Data (Rotating ',num2str(rot*i),' Degrees)']);
         if swPrint
             print(f,'-depsc2','-r200',...
-                [figpath,'svddisp-3D-',num2str(rot*i),'deg-',datestr(now),'.eps']);
+                [figpath,'svddisp-3D-',num2str(rot*i),'deg.eps']);
         end
         pause(0.1)
     end

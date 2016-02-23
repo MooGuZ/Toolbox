@@ -1,4 +1,4 @@
-function dispsom(map,mlabel,dlabel,clabel,ftitle)
+function dispsom(map,mlabel,dlabel,clabel,ftitle,fname)
 % DISPSOM show som map
 % 
 % usage : dispsom(map,mlabel,dlabel,clabel,ftitle)
@@ -7,7 +7,7 @@ function dispsom(map,mlabel,dlabel,clabel,ftitle)
 % Mar. 17, 2014
 
 % Function Switchers
-swPrint = false;
+swPrint = exist('fname','var');
 swClsfr = exist('clabel','var') && ~isempty(clabel);
 
 % Estimate Minimum Distance between Map Points
@@ -70,7 +70,7 @@ drawnow
 
 % Print SOM
 if swPrint
-    print(gcf,'-depsc2','-r300',['./fig/som-',datestr(now),'.eps']);
+    print(gcf,'-depsc2','-r300',fname);
 end
 
 end
