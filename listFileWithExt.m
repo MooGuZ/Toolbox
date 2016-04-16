@@ -8,7 +8,11 @@ function fileList = listFileWithExt(path, varargin)
 % [CHANGE LOG]
 % Nov. 4, 2015 - initial commit
 
-animExtSet = varargin;
+if iscell(varargin{1})
+    animExtSet = varargin{1};
+else
+    animExtSet = varargin;
+end
 % fetch all files information under the folder
 fileList = dir(path);
 % initialize animation file index
