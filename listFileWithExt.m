@@ -16,7 +16,7 @@ end
 % fetch all files information under the folder
 fileList = dir(path);
 % initialize animation file index
-findex = false(1,numel(fileList));
+findex = false(numel(fileList), 1);
 % search for files according to <animExtSet>
 for i = 1 : numel(fileList)
     % ignore hidden file and folders, including '.' and '..'
