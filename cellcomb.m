@@ -8,6 +8,7 @@ cc = cell(1, sum(cellfun(@numel, cellarr)));
 
 i = 0;
 for j = 1 : numel(cellarr)
+    n = numel(cellarr{j});
     cc(i + 1 : i + n) = cellarr{j}(:);
     i = i + n;
 end
