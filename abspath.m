@@ -2,6 +2,10 @@
 %      drive name in design.
 function p = abspath(p)
 part = pathdiv(p);
+if isempty(part)
+    p = unique(p);
+    return
+end
 % deal with root path
 switch part{1}
     case {'~'}

@@ -29,7 +29,7 @@ function f = animcompare(dataL, dataR, cmap, resolution)
     end
     
     % formalize data (Left Side)
-    if isstruct(dataL)
+    if isstruct(dataL) || isa(dataL, 'Package')
         dataL = dataL.data;
     end
     if numel(size(dataL)) == 2
@@ -42,7 +42,7 @@ function f = animcompare(dataL, dataR, cmap, resolution)
         dataL = reshape(dataL, [resolution, size(dataL, 2)]);
     end
     % formalize data (Right Side)    
-    if isstruct(dataR)
+    if isstruct(dataR) || isa(dataR, 'Package')
         dataR = dataR.data;
     end
     if numel(size(dataR)) == 2
@@ -61,14 +61,21 @@ function f = animcompare(dataL, dataR, cmap, resolution)
     ws.nframe = min(size(dataL, 3), size(dataR, 3));
     ws.fcount = 1;
     
-    ws.icon.play  = imresize(imread('./material/play.png', 'png'), [16, 16]);
-    ws.icon.pause = imresize(imread('./material/pause.png', 'png'), [16, 16]);
+    ws.bgcolor = 0.94 * ones(1, 3);
+    
+    icnpath = fullfile(fileparts(mfilename('fullpath')), 'material');
+    ws.icon.play  = imresize( ...
+        imread(fullfile(icnpath, 'play.png'), 'png', 'BackgroundColor', ws.bgcolor), ...
+        [16, 16]);
+    ws.icon.pause = imresize( ...
+        imread(fullfile(icnpath, 'pause.png'), 'png', 'BackgroundColor', ws.bgcolor), ...
+        [16, 16]);
     
     % ------------- ELEMENTS -------------
-    f = figure('Name',            'Animation Viewer', ...
+    f = figure('Name',            'Animation Compare', ...
                'Position',        fpos,  ...
                'Visible',         'off', ...
-               'Color',           [0, 0, 0], ...
+               'Color',           ws.bgcolor, ...
                'CLoseRequestFcn', @close);
 
     ws.animAxesL = axes('Units',    'Pixels', ...
@@ -93,12 +100,18 @@ function f = animcompare(dataL, dataR, cmap, resolution)
         ws.hanimR = imshow(ws.animdataR(:, :, 1));
     end
     
+    if (ws.nframe < 10)
+        sliderstep = (1 / ws.nframe) * [1, 1];
+    else
+        sliderstep = [1 / ws.nframe, 0.1];
+    end
+    
     ws.slider = uicontrol('Parent',     f, ...
                           'Style',      'Slider', ...
                           'Value',      1, ...
                           'Max',        ws.nframe, ...
                           'Min',        1, ...
-                          'SliderStep', [1 / ws.nframe, 0.1], ...
+                          'SliderStep', sliderstep, ...
                           'Position',   spos, ...
                           'Callback',   @jumpToFrame);
     
