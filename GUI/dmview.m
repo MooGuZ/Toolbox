@@ -251,7 +251,7 @@ end
 
 function recover = reconstruction(anim, model)
     sz = size(anim);
-    d  = model.wmatrix * bsxfun(@minus, MathLib.vec(anim, 2, 'front'), model.bias);
+    d  = model.wmatrix * bsxfun(@minus, vec(anim, 2, 'front'), model.bias);
     dp = DataPackage(d, 1, true);
     [amp, ph] = model.unit.compose(dp);
     data = model.unit.transform(amp, ph).data;
