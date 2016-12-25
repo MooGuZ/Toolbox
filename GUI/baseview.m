@@ -1,10 +1,13 @@
-function f = baseview(base)
+function f = baseview(base, varargin)
+    conf = Config(varargin);
+
     pos = layout();
 
     % data structure in GUI
     ws = struct();
 
-    ws.base = base / (2 * max(abs(base(:))));
+    % ws.base = base / (2 * max(abs(base(:))));
+    ws.base = base;
     ws.ibase = 1;
     ws.anim.nframe = 64;
     ws.anim.duration = 3;
@@ -23,7 +26,7 @@ function f = baseview(base)
 
     % create figure
     f = figure( ...
-        'Name',            'Complex Base Inspector', ...
+        'Name',            conf.pop('FigureName', 'Complex Base Inspector'), ...
         'Position',        pos.figure,  ...
         'Visible',         'off', ...
         'Color',           ws.bgcolor, ...
@@ -186,7 +189,7 @@ function pos = layout(hObject, ~)
     objsz = struct();
     objsz.prevButton = [50, 1.5*o];
     objsz.nextButton = objsz.prevButton;
-    objsz.bindexText = [70, o];
+    objsz.bindexText = [100, o];
     objsz.bindexEdit = objsz.bindexText;
     objsz.ppButton   = [o, o];
     objsz.speedSelector = [300, 3*o];

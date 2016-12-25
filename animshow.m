@@ -15,7 +15,7 @@ function animshow(anim,frmsz,duration,swColor)
 % 
 % P.N: PLease make sure to close the existing window in which the gif is
 % currently being played and open a separate window for another GIF
-% image.If another GIF is opened in the same window then the first timer
+% image. If another GIF is opened in the same window then the first timer
 % continues to run even if you close the figure window.
 %
 % Date: Nov 3rd, 2014

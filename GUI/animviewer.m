@@ -1,4 +1,4 @@
-function f = animviewer(data, cmap, resolution)
+function f = animviewer(data, cmap, resolution, varargin)
 % ANIMVIEWER create a GUI object to play given animation with support of
 % play/pause button and frame-corresponding slider.
 %
@@ -11,7 +11,7 @@ function f = animviewer(data, cmap, resolution)
 %   raised.
 %
 %   F = ANIMVIWER(DATA, CMAP) create a GUI object with figure handle F to
-%   play animation in DATA wich color map CMAP, which is a Nx3 matrix
+%   play animation in DATA according to color map CMAP, which is a Nx3 matrix
 %   containing RGB color value in each row. DATA here is an index matrix
 %   with 2 or 3 dimension.
 %
@@ -23,6 +23,11 @@ function f = animviewer(data, cmap, resolution)
 
 % MooGu Z. <hzhu@case.edu>
 % Feb 20, 2016
+
+% [CHANGE LOG]
+% Dec 09, 2016 - add support for color display mode
+    
+    conf = Config(varargin);
     
     % ------------- PREPARATION -------------
     [fpos, apos, spos, bpos] = layout();
@@ -52,6 +57,13 @@ function f = animviewer(data, cmap, resolution)
     
     ws.animdata = data;
     
+    % setup display mode
+    if all(isreal(data(:))) && min(data(:)) >= 0
+        ws.dispmode = 'gray';
+    else
+        ws.dispmode = 'color';
+    end
+    
     ws.nframe = size(data, 3);
     ws.fcount = 1;
     
@@ -67,7 +79,7 @@ function f = animviewer(data, cmap, resolution)
         [16, 16]);
     
     % ------------- ELEMENTS -------------
-    f = figure('Name',            'Animation Viewer', ...
+    f = figure('Name',            conf.pop('figureName', 'Animation Viewer'), ...
                'Position',        fpos,  ...
                'Visible',         'off', ...
                'Color',           ws.bgcolor, ...
@@ -80,6 +92,8 @@ function f = animviewer(data, cmap, resolution)
     
     if exist('cmap', 'var')
         ws.hanim = imshow(ws.animdata(:, :, 1), cmap);
+    elseif strcmpi(ws.dispmode, 'color')
+        ws.hanim = imshow(mat2img(ws.animdata(:, :, 1)));
     else
         ws.hanim = imshow(ws.animdata(:, :, 1));
     end
@@ -169,7 +183,11 @@ function jumpToFrame(hObject, ~)
     ws = guidata(hObject);
     
     ws.fcount = round(get(hObject, 'Value'));
-    set(ws.hanim, 'CData', ws.animdata(:, :, ws.fcount));
+    if strcmp(ws.dispmode, 'color')
+        set(ws.hanim, 'CData', mat2img(ws.animdata(:, :, ws.fcount)));
+    else
+        set(ws.hanim, 'CData', ws.animdata(:, :, ws.fcount));
+    end
     
     guidata(hObject, ws);
 end
@@ -189,7 +207,11 @@ end
 
 function showFrame(~, ~, f)
     ws = guidata(f);
-    set(ws.hanim, 'CData', ws.animdata(:, :, ws.fcount));
+    if strcmp(ws.dispmode, 'color')
+        set(ws.hanim, 'CData', mat2img(ws.animdata(:, :, ws.fcount)));
+    else
+        set(ws.hanim, 'CData', ws.animdata(:, :, ws.fcount));
+    end
     set(ws.slider, 'Value', ws.fcount);
     ws.fcount = mod(ws.fcount, ws.nframe) + 1;
     guidata(f, ws);
