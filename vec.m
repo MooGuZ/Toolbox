@@ -1,4 +1,4 @@
-function x = vec(x, dim, mode)
+function [x, sz] = vec(x, dim, mode)
 % VEC vectorize an array according to given options
 %
 % [OPTIONS]
@@ -9,6 +9,9 @@ function x = vec(x, dim, mode)
 %          while 'back' means combine all higher dimensions into one. And,
 %          'both' means do 'front' and 'back' vecterization at same time,
 %          and return a two dimension matrix.
+
+sz = size(x);
+
 if isempty(x)
     return
 end
@@ -18,13 +21,11 @@ if exist('dim', 'var')
         mode = 'front';
     end
     
-    sz = size(x);
-    
     switch lower(mode)
         case {'front'}
             if dim <= 0
                 x = reshape(x, [1, sz]);
-            elseif numel(sz) > dim
+            elseif dim < nndims(x)
                 x = reshape(x, [prod(sz(1 : dim)), sz(dim + 1 : end)]);
             else
                 x = x(:);
@@ -33,19 +34,29 @@ if exist('dim', 'var')
         case {'back'}
             if dim <= 0
                 x = x(:)';
-            elseif numel(sz) > dim
+            elseif dim < nndims(x)
                 x = reshape(x, [sz(1 : dim), prod(sz(dim + 1 : end))]);
             end
             
-        case {'both'}
+        case {'both', 'square'}
             if dim <= 0
                 x = x(:)';
-            elseif numel(sz) > dim
-                x = reshape(x, ...
-                    [prod(sz(1 : dim)), prod(sz(dim + 1 : end))]);
+            elseif dim < nndims(x)
+                x = reshape(x, [prod(sz(1 : dim)), prod(sz(dim + 1 : end))]);
             else
                 x = x(:);
             end
+            
+        case {'select', 'cubic'}
+            if dim <= 0
+                x = reshape(x, [1, 1, numel(x)]);
+            elseif dim == 1
+                x = reshape(x, [1, size(x)]);
+            elseif dim <= nndims(x)
+                x = reshape(x, [prod(sz(1 : dim-1)), sz(dim), prod(sz(dim + 1 : end))]);
+            else
+                x = x(:);
+            end                
             
         otherwise
             error('ArguemntError:MathLib', ...

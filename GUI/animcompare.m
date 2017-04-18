@@ -100,10 +100,10 @@ function f = animcompare(dataL, dataR, cmap, resolution)
         ws.hanimR = imshow(ws.animdataR(:, :, 1));
     end
     
-    if (ws.nframe < 10)
-        sliderstep = (1 / ws.nframe) * [1, 1];
+    if (ws.nframe < 21)
+        sliderstep = (1 / (ws.nframe - 1)) * [1, 1];
     else
-        sliderstep = [1 / ws.nframe, 0.1];
+        sliderstep = [1 / (ws.nframe - 1), 0.1];
     end
     
     ws.slider = uicontrol('Parent',     f, ...

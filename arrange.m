@@ -42,3 +42,7 @@ s = floor((sqrt(a^2 + 4 * (r * c - n)) - a) / 2);
 r = r - s;
 c = c + s;
 
+if nargout == 1
+    r = [r, c];
+end
+

@@ -19,6 +19,6 @@ if usegui
     hist(data(:), nbins);
     title(dname);
 else
-    fprintf('%17s >> \tMEAN:%-8.2e\tVAR:%-8.2e\tMAX:%-8.2e\tMIN:%-8.2e\n', ...
+    fprintf('%s >> MEAN:%-8.2e\tVAR:%-8.2e\tMAX:%-8.2e\tMIN:%-8.2e\n', ...
         dname, mean(data(:)), var(data(:)), max(data(:)), min(data(:)));
 end

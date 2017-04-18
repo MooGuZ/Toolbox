@@ -1,32 +1,29 @@
-function f = baseview(base, varargin)
+function f = sbaseview(base, varargin)
+% SBASEVIEW show static bases in a GUI.
+
     conf = Config(varargin);
 
     pos = layout();
 
     % data structure in GUI
     ws = struct();
-
-    % ws.base = base / (2 * max(abs(base(:))));
-    ws.base = base;
-    ws.ibase = 1;
-    ws.anim.nframe = 64;
-    ws.anim.duration = 3;
-    ws.anim.progress = 0;
-    ws.dmode = 'Real';
-    ws.bgcolor = [0.94, 0.94, 0.94];
-        
-    icnpath = fullfile(fileparts(mfilename('fullpath')), 'material');
     
-    ws.icon.play  = imresize( ...
-        imread(fullfile(icnpath, 'play.png'), 'png', 'BackgroundColor', ws.bgcolor), ...
-        pos.ppButton(3:4));
-    ws.icon.pause = imresize( ...
-        imread(fullfile(icnpath, 'pause.png'), 'png', 'BackgroundColor', ws.bgcolor), ...
-        pos.ppButton(3:4));
+    % special case
+    if ndims(base) ~= 3
+        hw = sqrt(size(base, 1));
+        assert(MathLib.isinteger(hw), 'Shape is wrong');
+        base = reshape(base, hw, hw, size(base, 2));
+    end
+    
+    ws.base = base + 0.5;
+    ws.ibase = 1;
+    ws.dmode = 'single';
+    ws.bgcolor = [0.94, 0.94, 0.94];
+    ws.summary = generateSummary(ws.base);
 
     % create figure
     f = figure( ...
-        'Name',            conf.pop('FigureName', 'Complex Base Inspector'), ...
+        'Name',            conf.pop('title', 'Static Base Inspector'), ...
         'Position',        pos.figure,  ...
         'Visible',         'off', ...
         'Color',           ws.bgcolor, ...
@@ -39,11 +36,11 @@ function f = baseview(base, varargin)
         'Position', pos.animAxes);
 
     switch lower(ws.dmode)
-        case {'real'}
-            ws.hanim = imshow(real(ws.base(:, :, ws.ibase)) + 0.5, [0, 1]);
+        case {'single'}
+            ws.hanim = imshow(ws.base(:, :, ws.ibase), [0, 1]);
             
-        case {'complex'}
-            ws.hanim = imshow(mat2img(ws.base(:, :, ws.ibase)));
+        case {'summary'}
+            ws.hanim = imshow(ws.summary);
             
         otherwise
             error('Something wrong in the program');
@@ -81,62 +78,30 @@ function f = baseview(base, varargin)
         'Callback', @gotoBase, ...
         'Visible', 'off');
     
-    ws.ppButton  = uicontrol( ...
-        'Parent',   f, ...
-        'Style',    'pushbutton', ...
-        'String',   '', ...
-        'CData',    ws.icon.pause, ...
-        'Position', pos.ppButton, ...
-        'Callback', @playpause);
-    
-    if (ws.anim.nframe < 10)
-        sliderstep = (1 / ws.anim.nframe) * [1, 1];
-    else
-        sliderstep = [1 / ws.anim.nframe, 0.1];
-    end
-    
-    ws.animSlider = uicontrol( ...
-        'Parent',     f, ...
-        'Style',      'slider', ...
-        'Value',      ws.anim.progress, ...
-        'SliderStep', sliderstep, ...
-        'Position',   pos.animSlider, ...
-        'Callback',   @jumpToFrame);
-    
-    ws.listener = addlistener(ws.animSlider, 'ContinuousValueChange', @jumpToFrame);
-    
-    ws.speedSelector = uibuttongroup( ...
+    ws.cmapSelector = uibuttongroup( ...
         'Parent', f, ...
         'Units', 'Pixels', ...
-        'Title', 'Animation Speed', ...
-        'Position', pos.speedSelector, ...
-        'SelectionChangedFcn', @selectSpeed);
+        'Title', 'Color Map', ...
+        'Position', pos.cmapSelector, ...
+        'SelectionChangedFcn', @selectCMap);
     
-    ws.speedSlow = uicontrol( ...
-        'Parent', ws.speedSelector, ...
+    ws.cmapGray = uicontrol( ...
+        'Parent', ws.cmapSelector, ...
         'Units', 'Normalized', ...
         'Style', 'radiobutton', ...
-        'String', 'Slow', ...
-        'Position', [0.1, 0.1, 0.2, 0.8], ...
+        'String', 'Gray', ...
+        'Position', [0.1, 0.1, 0.35, 0.8], ...
         'HandleVisibility', 'off');
     
-    ws.speedNormal = uicontrol( ...
-        'Parent', ws.speedSelector, ...
+    ws.cmapColorful = uicontrol( ...
+        'Parent', ws.cmapSelector, ...
         'Units', 'Normalized', ...
         'Style', 'radiobutton', ...
-        'String', 'Normal', ...
-        'Position', [0.4, 0.1, 0.2, 0.8], ...
+        'String', 'Colorful', ...
+        'Position', [0.55, 0.1, 0.35, 0.8], ...
         'HandleVisibility', 'off');
     
-    ws.speedFast = uicontrol( ...
-        'Parent', ws.speedSelector, ...
-        'Units', 'Normalized', ...
-        'Style', 'radiobutton', ...
-        'String', 'Fast', ...
-        'Position', [0.7, 0.1, 0.2, 0.8], ...
-        'HandleVisibility', 'off');
-    
-    set(ws.speedSelector, 'SelectedObject', ws.speedNormal);
+    set(ws.cmapSelector, 'SelectedObject', ws.cmapGray);
     
     ws.dmodeSelector = uibuttongroup( ...
         'Parent', f, ...
@@ -145,36 +110,28 @@ function f = baseview(base, varargin)
         'Position', pos.dmodeSelector, ...
         'SelectionChangedFcn', @selectDMode);
     
-    ws.dmodeReal = uicontrol( ...
+    ws.dmodeSingle = uicontrol( ...
         'Parent', ws.dmodeSelector, ...
         'Units', 'Normalized', ...
         'Style', 'radiobutton', ...
-        'String', 'Real', ...
+        'String', 'Single', ...
         'Position', [0.1, 0.1, 0.35, 0.8], ...
         'HandleVisibility', 'off');
     
-    ws.dmodeComplex = uicontrol( ...
+    ws.dmodeSummary = uicontrol( ...
         'Parent', ws.dmodeSelector, ...
         'Units', 'Normalized', ...
         'Style', 'radiobutton', ...
-        'String', 'Complex', ...
+        'String', 'Summary', ...
         'Position', [0.55, 0.1, 0.35, 0.8], ...
         'HandleVisibility', 'off');
     
-    set(ws.dmodeSelector, 'SelectedObject', ws.dmodeReal);
-    
-    ws.tmr = timer( ...
-        'TimerFcn', {@animateBase, f}, ...
-        'BusyMode', 'queue', ...
-        'ExecutionMode', 'fixedRate', ...
-        'Period', floor(ws.anim.duration / ws.anim.nframe * 1000) / 1000);
+    set(ws.dmodeSelector, 'SelectedObject', ws.dmodeSingle);
 
     guidata(f, ws);
     movegui(f, 'center');
     set(f, 'ResizeFcn', @layout);
     set(f, 'Visible',   'on');
-    
-    start(ws.tmr);
 end
 
 function pos = layout(hObject, ~)
@@ -191,13 +148,12 @@ function pos = layout(hObject, ~)
     objsz.nextButton = objsz.prevButton;
     objsz.bindexText = [100, o];
     objsz.bindexEdit = objsz.bindexText;
-    objsz.ppButton   = [o, o];
-    objsz.speedSelector = [300, 3*o];
-    objsz.dmodeSelector = [200, 3*o];
+    objsz.cmapSelector = [250, 3*o];
+    objsz.dmodeSelector = [250, 3*o];
     
     % position of figure and size of animation axes
     fixedSpace = [2*b, 2*b + 3*v + ...
-        objsz.ppButton(2) + objsz.prevButton(2) + objsz.speedSelector(2)];
+        objsz.prevButton(2) + objsz.cmapSelector(2)];
     if exist('hObject', 'var')
         pos.figure = get(hObject, 'Position');
         objsz.animAxes = pos.figure(3 : 4) - fixedSpace;
@@ -206,19 +162,14 @@ function pos = layout(hObject, ~)
         pos.figure = [0, 0, objsz.animAxes + fixedSpace];
     end
     
-    % size of flexible-size objects
-    objsz.animSlider = [objsz.animAxes(1)- objsz.ppButton(1) - v, o];
-    
     % calculate objects' position
-    pos.speedSelector = [b, b, objsz.speedSelector];
+    pos.cmapSelector = [b, b, objsz.cmapSelector];
     pos.dmodeSelector = [pos.figure(3) - b - objsz.dmodeSelector(1), b, objsz.dmodeSelector];
-    pos.prevButton = [b, sum(pos.speedSelector([2, 4])) + v, objsz.prevButton];
+    pos.prevButton = [b, sum(pos.cmapSelector([2, 4])) + v, objsz.prevButton];
     pos.nextButton = [pos.figure(3) - b - objsz.nextButton(1), pos.prevButton(2), objsz.nextButton];
     pos.bindexText = [round((pos.figure(3) - objsz.bindexText(1))/2), pos.prevButton(2), objsz.bindexText];
     pos.bindexEdit = pos.bindexText;
-    pos.ppButton   = [b, sum(pos.prevButton([2, 4])) + v, objsz.ppButton];
-    pos.animSlider = [sum(pos.ppButton([1, 3])) + v, pos.ppButton(2), objsz.animSlider];
-    pos.animAxes   = [b, sum(pos.ppButton([2, 4])) + v, objsz.animAxes];
+    pos.animAxes   = [b, sum(pos.prevButton([2, 4])) + v, objsz.animAxes];
     
     % arrange objects if capable
     if exist('hObject', 'var')
@@ -230,52 +181,67 @@ function pos = layout(hObject, ~)
         set(ws.nextButton, 'Position', max(pos.nextButton, threshold));
         set(ws.bindexText, 'Position', max(pos.bindexText, threshold));
         set(ws.bindexEdit, 'Position', max(pos.bindexEdit, threshold));
-        set(ws.ppButton,   'Position', max(pos.ppButton, threshold));
-        set(ws.animSlider, 'Position', max(pos.animSlider, threshold));
-        set(ws.speedSelector, 'Position', max(pos.speedSelector, threshold));
+        set(ws.cmapSelector, 'Position', max(pos.cmapSelector, threshold));
         set(ws.dmodeSelector, 'Position', max(pos.dmodeSelector, threshold));
     end
 end
 
-function close(hObject, ~)
-    ws = guidata(hObject);
-    if isfield(ws, 'tmr')
-        stop(ws.tmr);
-        delete(ws.tmr);
-    end
+function close(~, ~)
+%     ws = guidata(hObject);
+%     if isfield(ws, 'tmr')
+%         stop(ws.tmr);
+%         delete(ws.tmr);
+%     end
     closereq
 end
 
-function animateBase(~, ~, f)
-    ws = guidata(f);
-    setAnimProgress(f, ws.anim.progress + 1 / ws.anim.nframe);
-end
+% function animateBase(~, ~, f)
+%     ws = guidata(f);
+%     setAnimProgress(f, ws.anim.progress + 1 / ws.anim.nframe);
+% end
 
 function setBaseIndex(hObject, index)
     ws = guidata(hObject);
     ws.ibase = MathLib.bound(round(index), [1, size(ws.base, 3)]);
-    set(ws.bindexText, 'String', ['Base - ', num2str(ws.ibase)]);
     guidata(hObject, ws);
-    setAnimProgress(hObject, 0);
+    showBase(hObject);
 end
 
-function setAnimProgress(hObject, progress)
+function showBase(hObject, ~)
     ws = guidata(hObject);
-    ws.anim.progress = wrapTo360(progress * 360) / 360;
     switch lower(ws.dmode)
-        case {'real'}
-            I = real(ws.base(:, :, ws.ibase) * exp(-2j * pi * ws.anim.progress)) + 0.5;
+        case {'single'}
+            I = ws.base(:, :, ws.ibase);
+            set(ws.bindexText, 'String', ['Base - ', num2str(ws.ibase)]);
             
-        case {'complex'}
-            I = mat2img(ws.base(:, :, ws.ibase) * exp(-2j * pi * ws.anim.progress));
+        case {'summary'}
+            I = ws.summary;
+            set(ws.bindexText, 'String', 'Summary');
             
         otherwise
             error('Something wrong in the program');
     end
     set(ws.hanim, 'CData', I);
-    set(ws.animSlider, 'Value', ws.anim.progress);
     guidata(hObject, ws);
 end
+
+% function setAnimProgress(hObject, progress)
+%     ws = guidata(hObject);
+%     ws.anim.progress = wrapTo360(progress * 360) / 360;
+%     switch lower(ws.dmode)
+%         case {'real'}
+%             I = real(ws.base(:, :, ws.ibase) * exp(-2j * pi * ws.anim.progress)) + 0.5;
+%             
+%         case {'complex'}
+%             I = mat2img(ws.base(:, :, ws.ibase) * exp(-2j * pi * ws.anim.progress));
+%             
+%         otherwise
+%             error('Something wrong in the program');
+%     end
+%     set(ws.hanim, 'CData', I);
+%     set(ws.animSlider, 'Value', ws.anim.progress);
+%     guidata(hObject, ws);
+% end
 
 function prevBase(hObject, ~)
     ws = guidata(hObject);
@@ -311,54 +277,46 @@ function editBaseIndex(hObject, ~)
     uicontrol(ws.bindexEdit);
 end
 
-function playpause(hObject, ~)
+function selectCMap(hObject, eventData)
     ws = guidata(hObject);
-    switch get(ws.tmr, 'Running')
-      case 'on'
-        stop(ws.tmr);
-        set(ws.ppButton, 'CData', ws.icon.play);
-        
-      case 'off'
-        start(ws.tmr);
-        set(ws.ppButton, 'CData', ws.icon.pause);
-    end
-end
-
-function jumpToFrame(hObject, ~)
-    setAnimProgress(hObject, get(hObject, 'Value'));
-end
-
-function selectSpeed(hObject, eventData)
-    ws = guidata(hObject);
-    wasRunning = strcmpi(get(ws.tmr, 'Running'), 'on');
-    if wasRunning
-        stop(ws.tmr);
-    end
     switch eventData.NewValue.String
-        case {'Slow'}
-            ws.anim.duration = 10;
+        case {'Gray'}
+            colormap(ws.hanim, 'gray');
             
-        case {'Normal'}
-            ws.anim.duration = 3;
-            
-        case {'Fast'}
-            ws.anim.duration = 1;
+        case {'Colorful'}
+            colormap(ws.hanim, 'default');
             
         otherwise
             error('This cannot happend');
     end
-    set(ws.tmr, 'Period', floor(ws.anim.duration / ws.anim.nframe * 1000) / 1000);
     guidata(hObject, ws);
-    if wasRunning
-        start(ws.tmr);
-    end
 end
 
 function selectDMode(hObject, eventData)
     ws = guidata(hObject);
     ws.dmode = eventData.NewValue.String;
     guidata(hObject, ws);
-    if strcmpi(get(ws.tmr, 'Running'), 'off')
-        setAnimProgress(hObject, ws.anim.progress);
+    showBase(hObject);
+end
+
+function img = generateSummary(bases)
+    boarder = 3;
+    % get shape information of bases
+    [h, w, n] = size(bases);
+    % make arrangement of bases
+    [row, col] = arrange(n);
+    % generate cell of bases
+    imgcell = cell(row, col);
+    % fillup cells
+    background = zeros([h, w] + 2 * boarder);
+    for i = 1 : n
+        imgcell{i} = background;
+        imgcell{i}(boarder + (1 : h), boarder + (1 : w)) = bases(:, :, i);
     end
+    % fill up following cells
+    for j = 1 : numel(imgcell) - n
+        imgcell{n + j} = background;
+    end
+    % create summary image
+    img = cell2mat(imgcell);
 end

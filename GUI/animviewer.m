@@ -1,4 +1,4 @@
-function f = animviewer(data, cmap, resolution, varargin)
+function f = animviewer(data, varargin)
 % ANIMVIEWER create a GUI object to play given animation with support of
 % play/pause button and frame-corresponding slider.
 %
@@ -9,6 +9,10 @@ function f = animviewer(data, cmap, resolution, varargin)
 %   a 2D matrix, ANIMVIEWER would try to recover frames in the vectors into
 %   NxN matrix automatically. If this operation failed, an error would be
 %   raised.
+%
+%   F = ANIMVIEWER(DATA, PROPLIST...) provide interface to make deeper
+%   modification. PROPLIST is composed by key and value pairs. Supported
+%   keys are 'CMAP', 'DISPMODE', and 'RESOLUTION'.
 %
 %   F = ANIMVIWER(DATA, CMAP) create a GUI object with figure handle F to
 %   play animation in DATA according to color map CMAP, which is a Nx3 matrix
@@ -46,7 +50,9 @@ function f = animviewer(data, cmap, resolution, varargin)
         data = data.data;
     end
     if numel(size(data)) == 2
-        if ~exist('resolution', 'var')
+        if conf.exist('resolution')
+            resolution = conf.pop('resolution');
+        else
             n = size(data, 1);
             assert(round(sqrt(n))^2 == n, ...
                    'Need resolution information');
@@ -58,7 +64,9 @@ function f = animviewer(data, cmap, resolution, varargin)
     ws.animdata = data;
     
     % setup display mode
-    if all(isreal(data(:))) && min(data(:)) >= 0
+    if conf.exist('dispmode')
+        ws.dispmode = conf.pop('dispmode');
+    elseif all(isreal(data(:))) && min(data(:)) >= 0
         ws.dispmode = 'gray';
     else
         ws.dispmode = 'color';
@@ -90,7 +98,9 @@ function f = animviewer(data, cmap, resolution, varargin)
                        'ytick',    [], ...
                        'Position', apos);
     
-    if exist('cmap', 'var')
+    if conf.exist('cmap')
+        ws.hanim = imshow(ws.animdata(:, :, 1), conf.pop('cmap'));
+    elseif exist('cmap', 'var')
         ws.hanim = imshow(ws.animdata(:, :, 1), cmap);
     elseif strcmpi(ws.dispmode, 'color')
         ws.hanim = imshow(mat2img(ws.animdata(:, :, 1)));
@@ -98,10 +108,10 @@ function f = animviewer(data, cmap, resolution, varargin)
         ws.hanim = imshow(ws.animdata(:, :, 1));
     end
     
-    if (ws.nframe < 10)
-        sliderstep = (1 / ws.nframe) * [1, 1];
+    if (ws.nframe < 21)
+        sliderstep = (1 / (ws.nframe - 1)) * [1, 1];
     else
-        sliderstep = [1 / ws.nframe, 0.1];
+        sliderstep = [1 / (ws.nframe - 1), 0.1];
     end
     
     ws.slider = uicontrol('Parent',     f, ...

@@ -1,4 +1,7 @@
 function f = dmview(folder, model)
+% DMVIEW previde a GUI to compare orginal animation with its reconstructed
+% version by given model.
+
     pos = layout();
 
     % data structure in GUI
@@ -31,7 +34,7 @@ function f = dmview(folder, model)
         'Position',        pos.figure,  ...
         'Visible',         'off', ...
         'Color',           ws.bgcolor, ...
-        'CLoseRequestFcn', @close);
+        'CloseRequestFcn', @close);
 
     ws.animAxes = axes( ...
         'Units', 'Pixels', ...

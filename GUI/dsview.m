@@ -1,4 +1,7 @@
 function f = dsview(folder)
+% DSVIEW is short for DataSetView, which show all the animation of the
+% given folder with a GUI.
+
     pos = layout();
 
     % data structure in GUI
