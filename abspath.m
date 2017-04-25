@@ -1,7 +1,7 @@
 % PRB: haven't been tested on Window, here assuming PWD return path with
 %      drive name in design.
 function p = abspath(p)
-part = pathdiv(p);
+part = pathdiv(fullfile(p));
 if isempty(part)
     p = unique(p);
     return
