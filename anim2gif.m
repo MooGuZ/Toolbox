@@ -59,6 +59,6 @@ else
     [I,cmap] = gray2ind(anim,256);
 end
 % write gif file
-imwrite(reshape(I,[sz,1,nframe]),cmap,fname,'gif','DelayTime',delay);
+imwrite(reshape(I,[sz,1,nframe]),cmap,fname,'gif','DelayTime',delay,'Loopcount', inf);
 
 end
