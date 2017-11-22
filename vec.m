@@ -51,7 +51,7 @@ if exist('dim', 'var')
             if dim <= 0
                 x = reshape(x, [1, 1, numel(x)]);
             elseif dim == 1
-                x = reshape(x, [1, size(x)]);
+                x = reshape(x, [1, sz(1), prod(sz(2:end))]);
             elseif dim <= nndims(x)
                 x = reshape(x, [prod(sz(1 : dim-1)), sz(dim), prod(sz(dim + 1 : end))]);
             else
