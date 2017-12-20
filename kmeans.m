@@ -1,47 +1,48 @@
-function [kernel,label,state] = kmeans(data,k,labinit)
-
-swShow = true; % Switcher of Show
-if swShow
-    niter = 0;
-end
-
-[d,nsample] = size(data);
-
-% Initialize Groups
-if exist('labinit','var')
-    label = labinit;
-else
-    n = floor(nsample/k);
-    index = randperm(nsample);
-    label = ones(1,nsample);
-    for i = 1 : k
-        label(index((i-1)*n+1:i*n)) = i;
-    end
-end
-state.label.init = label;
-
-kernel = zeros(d,k);
-dist = zeros(k,nsample);
-label_record = zeros(1,nsample);
-while any(label - label_record)
-    label_record = label;
-    for i = 1 : k
-        % Calculate Kernels according to Groups
-        kernel(:,i) = mean(data(:,label==i),2);
-        % Recalculate Distance of Data Points to Each Kernel
-        dist(i,:) = sum(bsxfun(@minus,data,kernel(:,i)).^2);
-    end
-    % Group according to Distances to each Kernel
-    [error,label] = min(dist,[],1);
-    % Classification Evaluation
-    Q = mean(error);
-    % Show Results
-    if swShow
+function [kernel, label, record] = kmeans(data, k)
+% K-means algorithm with label random initialization
+%
+% See also kmeansplot.
+%
+% MooGu Z. <hzhu@case.edu>
+    
+    niter = 1;
+    % initialize records    
+    record = struct('kernel', {}, 'label', {});
+    % find region of data
+    maxval = max(data, [], 2);
+    minval = min(data, [], 2);
+    % initialize kernel
+    kernel = rand(size(data, 1), k);
+    kernel = bsxfun(@plus, bsxfun(@times, kernel, maxval - minval), minval);
+    % EM-Algorithm to solve K-means clustering
+    while true
+        dist = cell2mat(arrayfun( ...
+            @(i) sum(bsxfun(@minus, data, kernel(:, i)).^2), 1:k, ...
+            'UniformOutput', false)');
+        % update label
+        [~, label] = min(dist);
+        % udpate records
+        record(niter) = struct('kernel', kernel, 'label', label);        
+        % check stop criteria
+        if niter > 1 && not(any(label - record(niter-1).label))
+            break
+        end
+        % update iteration counter
         niter = niter + 1;
-        fprintf('Q[%2d] >> %.2f\n',niter,Q);
+        % update kernel
+        kernel = updateKernel(kernel, data, label);    
     end
+
 end
-state.label.final = label;
+
+function kernel = updateKernel(kernel, data, label)
+% Routine to update kernel, this implementation would avoid NaN in the case
+% that no data point belongs to a kernel.
+
+    lset   = unique(label);
+    buffer = cell2mat(arrayfun( ...
+        @(i) mean(data(:, label == i), 2), lset, 'UniformOutput', false));
+    kernel(:, lset) = buffer;
 
 end
 
