@@ -17,10 +17,10 @@ function [kernel, label, record] = kmeans(data, k)
     % EM-Algorithm to solve K-means clustering
     while true
         dist = cell2mat(arrayfun( ...
-            @(i) sum(bsxfun(@minus, data, kernel(:, i)).^2), 1:k, ...
+            @(i) sum(bsxfun(@minus, data, kernel(:, i)).^2, 1), 1:k, ...
             'UniformOutput', false)');
         % update label
-        [~, label] = min(dist);
+        [~, label] = min(dist, [], 1);
         % udpate records
         record(niter) = struct('kernel', kernel, 'label', label);        
         % check stop criteria

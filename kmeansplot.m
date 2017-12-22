@@ -16,15 +16,17 @@ function kmeansplot(data, record, plotpath, hidefig)
         hidefig = false;
     end
 
-    % do PCA analyse for high dimensional data
-    if size(data, 1) > 2
+    % normalize data to 2 dimension for plotting
+    if size(data, 1) > 2 % use PCA to project high dimensional data        
         covmat = data * data';
         [V, D] = eig(covmat);
         [~, index] = sort(diag(D), 'descend');
         V = V(:, index);
         encode = V(:, 1:2)';
         pltdata = encode * data;
-    else
+    elseif size(data, 1) == 1 % set the 2nd dimension to 0       
+        pltdata = [data; zeros(size(data))];
+    else % draw 2 dimensional data directly
         pltdata = data;
     end
 
@@ -43,6 +45,9 @@ function kmeansplot(data, record, plotpath, hidefig)
             kernel = encode * record.kernel;
         else
             kernel = record.kernel;
+            if size(kernel, 1) == 1
+                kernel = [kernel; zeros(size(kernel))];
+            end
         end
         % draw data points
         for i = 1 : k
@@ -75,6 +80,9 @@ function kmeansplot(data, record, plotpath, hidefig)
                 kernel = encode * record(j).kernel;
             else
                 kernel = record(j).kernel;
+                if size(kernel, 1) == 1
+                    kernel = [kernel; zeros(size(kernel))];
+                end
             end
             % draw data points
             for i = 1 : k
