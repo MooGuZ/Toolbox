@@ -10,8 +10,10 @@ function [S, padsize] = getStrideSet(X, stride, referPoint, direction)
 % Version 0.01 - Hao Zhu <hxz244@case.edu>
 % Jul 30, 2018
     
-    M = size(X, 1);
-    N = size(X, 2);
+    xsize = size(X);
+    M = xsize(1);
+    N = xsize(2);
+    L = prod(xsize) / (M * N);
     m = stride(1);
     n = stride(2);
     
@@ -39,8 +41,7 @@ function [S, padsize] = getStrideSet(X, stride, referPoint, direction)
         padsizePre  = [nrowGrid * m, ncolGrid * n] - gridStart + 1;
         padsizePost = [nrowGrid * m, ncolGrid * n] - ([M, N] - gridEnd);
         % padding array
-        P = padarray(X, padsizePre, 0, 'pre');
-        P = padarray(P, padsizePost, 0, 'post');
+        P = padarray(padarray(X, padsizePre, 0, 'pre'), padsizePost, 0, 'post');
         % compose padding size
         padsize = [padsizePre, padsizePost];
     end
@@ -49,25 +50,31 @@ function [S, padsize] = getStrideSet(X, stride, referPoint, direction)
     nrow = size(P, 1) / m;
     ncol = size(P, 2) / n;
     % reshape to separate grids
-    P = reshape(P, m, nrow, n, ncol);
+    P = reshape(P, [m, nrow, n, ncol, L]);
     % permute to make slice in first two dimensions
-    P = permute(P, [2, 4, 1, 3]);
+    P = permute(P, [2, 4, 1, 3, 5]);
     % compose cell array
-    S = cell(m, n);
+    S = cell(m, n, L);
     % fill-in each slice
     switch direction
-      case {'normal'}
+      case {'normal'}        
         for i = 1 : m
             for j = 1 : n
-                S{i, j} = P(:, :, i, j);
+                for k = 1 : L
+                    S{i, j, k} = P(:, :, i, j, k);
+                end
             end
         end
         
       case {'reverse'}
         for i = 1 : m
             for j = 1 : n
-                S{i, j} = P(:, :, m - i + 1, n - j + 1);
+                for k = 1 : L
+                    S{i, j, k} = P(:, :, m - i + 1, n - j + 1, k);
+                end
             end
         end
     end
+    % reshape cell array
+    S = reshape(S, [m, n, xsize(3:end)]);
 end
