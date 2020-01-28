@@ -29,6 +29,10 @@ function f = animview(data, varargin)
         if isstruct(data{i}) || isa(data{i}, 'DataPackage')
             data{i} = data{i}.data;
         end
+        % gather from GPU if necessary
+        if isa(data{i}, 'gpuArray')
+            data{i} = gather(data{i});
+        end
         % reshape frames of data
         if numel(size(data{i})) == 2
             if not(isfield(ws, 'resolution'))
