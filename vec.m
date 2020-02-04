@@ -8,7 +8,10 @@ function [x, sz] = vec(x, dim, mode)
 %   MODE : 'front', 'back', or 'both'. 'front' means collapsing each unit;
 %          while 'back' means combine all higher dimensions into one. And,
 %          'both' means do 'front' and 'back' vecterization at same time,
-%          and return a two dimension matrix.
+%          and return a two dimension matrix. Besides, there is a new mode
+%          supported : 'select', which collapses all lower dimension and
+%          combines all higher dimension, would convert input into a cubic
+%          shape, where the specified dimension laies on the 2nd.
 
 sz = size(x);
 
