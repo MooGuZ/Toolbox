@@ -275,7 +275,9 @@ function showFrame(hObject, ~)
     else
         set(ws.label, 'String', sprintf('FRAME %02d', ws.fcount));
     end
-    ws.fcount = mod(ws.fcount, ws.nframe) + 1;
+    if strcmpi(ws.tmr.Running, 'on')
+        ws.fcount = mod(ws.fcount, ws.nframe) + 1;
+    end
     guidata(hObject, ws);
 end
 
