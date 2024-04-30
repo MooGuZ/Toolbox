@@ -1,4 +1,4 @@
-function f = animview(data, varargin)
+function f = animview(data)
 % ANIMVIEW create a GUI object to play given animation(s) with support of
 % play/pause button and frame-corresponding slider.
 %
@@ -8,279 +8,271 @@ function f = animview(data, varargin)
 %   dimension of DATA is considered as axes of animation frames. If DATA is
 %   a 2D matrix, ANIMVIEWER would try to recover frames in the vectors into
 %   NxN matrix automatically. If this operation failed, an error would be
-%   raised. DATA can also be a cell array of data with same quantity of frames
-%   in each ones.
-%
-%   F = ANIMVIEW(DATA, PROPLIST...) provide interface to make deeper
-%   modification. PROPLIST is composed by key and value pairs. Supported
-%   keys are 'CMAP', 'DISPMODE', and 'RESOLUTION'.
+%   raised. You can also put multiple animation in one time.
 %
 % MooGu Z. <hzhu@case.edu>
-% June 4, 2017
-    conf = Config(varargin);
-    % work space
-    ws = struct();
-    % put data into cell for uniform processing
-    if not(iscell(data))
-        data = {data};
-    end
-    % preprocessing of data
-    for i = 1 : numel(data)
-        if isstruct(data{i}) || isa(data{i}, 'DataPackage')
-            data{i} = data{i}.data;
-        end
-        % gather from GPU if necessary
-        if isa(data{i}, 'gpuArray')
-            data{i} = gather(data{i});
-        end
-        % reshape frames of data
-        if numel(size(data{i})) == 2
-            if not(isfield(ws, 'resolution'))
-                if conf.exist('resolution')
-                    ws.resolution = conf.pop('resolution');
-                else
-                    n = size(data{i}, 1);
-                    assert(round(sqrt(n))^2 == n, ...
-                        'Need resolution information');
-                    ws.resolution = sqrt([n, n]);
-                end
-            end
-            data{i} = reshape(data{i}, [ws.resolution, size(data{i}, 2)]);
-        end
-        % check consistancy
-        if isfield(ws, 'nframe')
-            assert(size(data{i}, 3) == ws.nframe, 'INCONSISTANT IN FRAME QUANTITY');
-            assert(size(data{i}, 4) == ws.batchsize, 'INCONSISTANT IN BATCHSIZE');
-        else
-            ws.nframe    = size(data{i}, 3);
-            ws.batchsize = size(data{i}, 4);
-            assert(ws.nframe > 1, 'ANIMVIEWER REQUIRE AT LEAST 2 FRAMES');
-        end
-    end
-    ws.data = data;
-    % initialize parameters
-    ws.inited  = false;
-    ws.fcount  = 1;
-    ws.bcount  = 1;
-    ws.bgcolor = conf.pop('BackGroundColor', 0.94 * ones(1, 3));
-    if (ws.nframe < 21)
-        ws.sliderstep = (1 / (ws.nframe - 1)) * [1, 1];
-    else
-        ws.sliderstep = [1 / (ws.nframe - 1), 0.1];
-    end
-    % load icons
-    icnpath = fullfile(fileparts(mfilename('fullpath')), 'material');
-    ws.icon.play  = imresize( ...
-        imread(fullfile(icnpath, 'play.png'), 'png', 'BackgroundColor', ws.bgcolor), ...
-        [16, 16]);
-    ws.icon.pause = imresize( ...
-        imread(fullfile(icnpath, 'pause.png'), 'png', 'BackgroundColor', ws.bgcolor), ...
-        [16, 16]);
-    % initialize figure in invisible mode
-    f = figure( ...
-        'Name',            conf.pop('title', 'Animation Viewer'), ...
-        'Visible',         'off', ...
-        'Color',           ws.bgcolor, ...
-        'CLoseRequestFcn', @closeView);
-    % create GUI elements
-    ws.animAxes = cell(1, numel(ws.data));
-    ws.himage   = cell(1, numel(ws.data));
-    for i = 1 : numel(ws.data)
-        ws.animAxes{i} = axes( ...
-            'Parent', f, ...
-            'Units',  'Pixels', ...
-            'xtick',  [], ...
-            'ytick',  []);
-        ws.himage{i} = imshow(ws.data{i}(:, :, 1, 1));
-    end
-    
-    ws.slider = uicontrol( ...
-        'Parent',     f, ...
-        'Style',      'Slider', ...
-        'Value',      1, ...
-        'Max',        ws.nframe, ...
-        'Min',        1, ...
-        'SliderStep', ws.sliderstep, ...
-        'Callback',   @jumpToFrame);
-    
-    ws.listener = addlistener(ws.slider, 'ContinuousValueChange', @jumpToFrame);
-    
-    ws.ppButton  = uicontrol( ...
-        'Parent',   f, ...
-        'Style',    'pushbutton', ...
-        'String',   '', ...
-        'CData',    ws.icon.pause, ...
-        'Callback', @playpause);
-    
-    if ws.batchsize > 1
-        ws.prevButton = uicontrol( ...
-            'Parent',   f, ...
-            'Style',    'pushbutton', ...
-            'String',   'PREV', ...
-            'Callback', @prevAnim);
-        ws.nextButton = uicontrol( ...
-            'Parent',   f, ...
-            'Style',    'pushbutton', ...
-            'String',   'NEXT', ...
-            'Callback', @nextAnim);
-        ws.label = uicontrol( ...
-            'Parent', f, ...
-            'Style',  'text', ...
-            'String', sprintf('ANIM %02d - FRAME %02d', ws.bcount, ws.fcount));
-    else
-        ws.label = uicontrol( ...
-            'Parent', f, ...
-            'Style',  'text', ...
-            'String', sprintf('FRAME %02d', ws.fcount));
-    end
-        
-    ws.tmr = timer('TimerFcn', {@playAnim, f}, ...
-                   'BusyMode', 'Queue', ...
-                   'ExecutionMode', 'FixedRate', ...
-                   'Period', 0.1);
-            
-    guidata(f, ws);
-    
-    % ------------- RUN -------------
-    layout(f);
-
-    movegui(f, 'center');
-    
-    set(f, 'ResizeFcn', @layout);
-    set(f, 'Visible',   'on');
-    
-    start(ws.tmr);
+% April 29, 2024
+arguments (Repeating)
+    data
 end
 
-function layout(canvas, ~)
-    b = 20; % border width
-    v = 10; % interval width between objects
-    
-    % information of objects' size
-    szinfo = struct( ...
-        'axis',       [256, 256], ...
-        'textbutton', [48, 24], ...
-        'ppbutton',   [16, 16], ...
-        'slider',     [inf, 16], ...
-        'label',      [128, 24]);
-    
-    ws = guidata(canvas);
-    
-    % make arrangement for axes
-    [nrow, ncol] = arrange(numel(ws.data));
-    
-    % calculate minimum canvas size
-    minCanvas = b * 2 + [v * (ncol - 1) + szinfo.axis(1) * ncol, ...
-            v * (nrow + 1) + szinfo.axis(2) * nrow + szinfo.textbutton(2) + szinfo.ppbutton(2)];
-    
-    % obtain figure position
-    if ws.inited
-        canvasSize = get(canvas, 'Position');
-        canvasSize = canvasSize(3:4);
-        szinfo.axis = (canvasSize - b * 2 - [v * (ncol - 1), ...
-            v * (nrow + 1) + szinfo.textbutton(2) + szinfo.ppbutton(2)]) ...
-            ./ [ncol, nrow];
-    else
-        canvasSize = minCanvas;
-        set(canvas, 'Position', [0, 0, canvasSize]);
-        ws.inited = true;
+% Regularize Data into Cell of Matrix
+for i = 1 : numel(data)
+    if isstruct(data{i}) || isa(data{i}, 'DataPackage')
+        data{i} = data{i}.data;
     end
-    % calculate width of slider
-    szinfo.slider(1) = canvasSize(1) - b * 2 - v - szinfo.ppbutton(1);
-    
-    % calculate each objects position
-    pos.ppbutton = [b, b, szinfo.ppbutton];
-    pos.slider   = [v + sum(pos.ppbutton([1, 3])), b, szinfo.slider];
-    pos.label    = [ ...
-        (canvasSize(1) - szinfo.label(1)) / 2, ...
-        sum(pos.ppbutton([2, 4])) + v, ...
-        szinfo.label];        
-    if isfield(ws, 'prevButton')
-        pos.prevbutton = [b, pos.label(2), szinfo.textbutton];
-        pos.nextbutton = [canvasSize(1) - b - szinfo.textbutton(1), pos.prevbutton(2 : 4)];
+    % gather from GPU if necessary
+    if isa(data{i}, 'gpuArray')
+        data{i} = gather(data{i});
     end
-    pos.axis = [b, v + sum(pos.label([2, 4])), (szinfo.axis + v).* [ncol, nrow] - v];
-    
-    % rearrange objects
-    threshold = [-inf, -inf, eps, eps];
-    set(ws.ppButton, 'Position', max(pos.ppbutton, threshold));
-    set(ws.slider, 'Position', max(pos.slider, threshold));
-    set(ws.label, 'Position', max(pos.label, threshold));
-    if isfield(ws, 'prevButton')
-        set(ws.prevButton, 'Position', max(pos.prevbutton, threshold));
-        set(ws.nextButton, 'Position', max(pos.nextbutton, threshold));
+    % reshape frames of data
+    if numel(size(data{i})) == 2
+        n = size(data{i}, 1);
+        try
+            data{i} = reshape(data{i}, [sqrt(n), sqrt(n), size(data{i}, 2)]);
+        catch
+            error('RESOLUTION INFORMAITON NEEDED!');
+        end
     end
-    for i = 1 : numel(ws.data)
-        irow = floor((i - 1) / ncol) + 1;
-        icol = i - (irow - 1) * ncol;
-        xcrd = pos.axis(1) + (szinfo.axis(1) + v) * (icol - 1);
-        ycrd = pos.axis(2) + (szinfo.axis(2) + v) * (nrow - irow);
-        set(ws.animAxes{i}, 'Position', max([xcrd, ycrd, szinfo.axis], threshold));
-    end
-    
-    guidata(canvas, ws);
 end
 
+% Create Figure and Play Animation in it
+f = initialize(data);
+f.UserData.tmr = timer( ...
+    'TimerFcn',      {@playAnim, f}, ...
+    'BusyMode',      'Drop', ...
+    'ExecutionMode', 'FixedRate', ...
+    'Period',        0.1);
+start(f.UserData.tmr);
+end
+
+%% Layout Initialization
+function f = initialize(data)
+ws = struct( ...
+    'iframe', 0, 'nframe', min(cellfun(@(c) size(c,3), data)), ...
+    'ianim',  1, 'nanim',  min(cellfun(@(c) size(c,4), data)));
+% Figure and Layout Manager
+f = uifigure( ...
+    'Name',            'Animation Viewer', ...
+    'Visible',         'on', ...
+    'CloseRequestFcn', @closeView);
+flayout = uigridlayout(f);
+flayout.ColumnWidth = {25, 25, '1x', 25, 25};
+flayout.RowHeight   = {'1x', 25, 25, 25};
+% Panel containing all animations
+ws.panel = uipanel(flayout);
+ws.panel.Layout.Column = [1,5];
+ws.panel.Layout.Row    = 1;
+% Animations
+[nrow, ncol] = arrange(numel(data));
+playout = uigridlayout(ws.panel);
+playout.ColumnWidth = repmat({'1x'}, 1, ncol);
+playout.RowHeight   = repmat({'1x'}, 1, nrow);
+ws.animplayer = cell(1,numel(data));
+for i = 1 : numel(data)
+    D = data{i}(:,:,1:ws.nframe,1:ws.nanim);
+    ws.animplayer{i} = uiimage(playout, ...
+        'UserData',        animExpand(D), ...
+        'ImageClickedFcn', @playpause);
+    ws.animplayer{i}.Layout.Column = mod(i-1,ncol) + 1;
+    ws.animplayer{i}.Layout.Row    = ceil(i/ncol);
+end
+% Resize Figure
+f.Position(3:4) = [ncol, nrow] * 280 + [20 125];
+movegui(f, 'center');
+% Button:Previous
+ws.btnPrev = uibutton(flayout, ...
+    'Text',            'PREV', ...
+    'ButtonPushedFcn', @prevAnim, ...
+    'Visible',         ws.nanim > 1);
+ws.btnPrev.Layout.Column = [1,2];
+ws.btnPrev.Layout.Row    = 2;
+% Label
+ws.label = uilabel(flayout, ...
+    'FontSize',            14, ...
+    'HorizontalAlignment', 'center', ...
+    'VerticalAlignment',   'center');
+ws.label.Layout.Column = 3;
+ws.label.Layout.Row    = 2;
+if ws.nanim > 1
+    ws.label.UserData = @(i,j) sprintf('ANIM %02d - FRAME %02d', i, j);
+else
+    ws.label.UserData = @(~,j) sprintf('FRAME %02d', j);
+end
+% Button:Next
+ws.btnNext = uibutton(flayout, ...
+    'Text',            'NEXT', ...
+    'ButtonPushedFcn', @nextAnim, ...
+    'Visible',         ws.nanim > 1);
+ws.btnNext.Layout.Column = [4,5];
+ws.btnNext.Layout.Row    = 2;
+% Button:Play&Pause
+ws.btnPlayPause = uibutton(flayout, ...
+    'Text',            '', ...
+    'Icon',            'pause.png', ...
+    'IconAlignment',   'center', ...
+    'ButtonPushedFcn', @playpause);
+ws.btnPlayPause.Layout.Column = [1,2];
+ws.btnPlayPause.Layout.Row    = [3,4];
+% Slider
+ws.slider = uislider(flayout, ...
+    'Value',            1, ...
+    'Limits',           [1, ws.nframe], ...
+    'MajorTicks',       [], ...
+    'MinorTicks',       [], ...
+    'ValueChangingFcn', @jumpToFrame);
+ws.slider.Layout.Column = 3;
+ws.slider.Layout.Row    = 3;
+% Speed Information
+ws.idelay     = 3;
+ws.delayText  = {'0.25x', '0.5x', '1.0x', '2.0x', '4.0x'};
+ws.delayValue = [0.4, 0.2, 0.1, 0.05, 0.025];
+% Button:SlowDown
+ws.btnSlowDown = uibutton(flayout, ...
+    'Text',            '', ...
+    'Icon',            'slowdown.png', ...
+    'IconAlignment',   'center', ...
+    'ButtonPushedFcn', @slowdown);
+ws.btnSlowDown.Layout.Column = 4;
+ws.btnSlowDown.Layout.Row    = 3;
+% Button:SpeedUp
+ws.btnSpeedUp = uibutton(flayout, ...
+    'Text',            '', ...
+    'Icon',            'speedup.png', ...
+    'IconAlignment',   'center', ...
+    'ButtonPushedFcn', @speedup);
+ws.btnSpeedUp.Layout.Column = 5;
+ws.btnSpeedUp.Layout.Row    = 3;
+% Button:Reset
+ws.btnReset = uibutton(flayout, ...
+    'Text',            ws.delayText{ws.idelay}, ...
+    'ButtonPushedFcn', @reset);
+ws.btnReset.Layout.Column = [4,5];
+ws.btnReset.Layout.Row    = 4;
+% Ranger
+ws.ranger = uislider(flayout, 'range', ...
+    'Value',           [1, ws.nframe], ...
+    'Limits',          [1, ws.nframe], ...
+    'MajorTicks',      [], ...
+    'MinorTicks',      [], ...
+    'ValueChangedFcn', @setupRange);
+ws.ranger.Layout.Column = 3;
+ws.ranger.Layout.Row    = 4;
+ws.ihead  = 1;
+ws.length = ws.nframe;
+% Record Layout
+ws.flayout = flayout;
+ws.playout = playout;
+% Setup Shared Information
+f.UserData = ws;
+end
+
+%% Callback Functions
 function closeView(hObject, ~)
-    ws = guidata(hObject);
-    if isfield(ws, 'tmr')
-        stop(ws.tmr);
-        delete(ws.tmr);
-    end
-    closereq
+ws = ancestor(hObject,"figure","toplevel").UserData;
+if isfield(ws, 'tmr')
+    stop(ws.tmr);
+    delete(ws.tmr);
+end
+closereq
 end
 
 function prevAnim(hObject, ~)
-    ws = guidata(hObject);
-    ws.bcount = mod(ws.bcount - 2, ws.batchsize) + 1;
-    guidata(hObject, ws);
-    showFrame(hObject);
+f = ancestor(hObject,"figure","toplevel");
+f.UserData.ianim = mod(f.UserData.ianim - 2, f.UserData.nanim) + 1;
+showFrame(hObject);
 end
 
 function nextAnim(hObject, ~)
-    ws = guidata(hObject);
-    ws.bcount = mod(ws.bcount, ws.batchsize) + 1;
-    guidata(hObject, ws)
-    showFrame(hObject);
+f = ancestor(hObject,"figure","toplevel");
+f.UserData.ianim = mod(f.UserData.ianim, f.UserData.nanim) + 1;
+showFrame(hObject);
 end
 
-function jumpToFrame(hObject, ~)
-    ws = guidata(hObject);
-    ws.fcount = round(get(hObject, 'Value'));
-    guidata(hObject, ws);
-    showFrame(hObject);
+function jumpToFrame(hObject, valueChangingData)
+f = ancestor(hObject,"figure","toplevel");
+f.UserData.iframe = round(valueChangingData.Value);
+showFrame(hObject);
+end
+
+function setDelay(f)
+% Setup Text
+f.UserData.btnReset.Text = ...
+    f.UserData.delayText{f.UserData.idelay};
+% Setup Timer
+d = f.UserData.delayValue(f.UserData.idelay);
+switch f.UserData.tmr.Running
+    case 'on'
+        stop(f.UserData.tmr);
+        f.UserData.tmr.Period = d;
+        start(f.UserData.tmr);
+
+    case 'off'
+        f.UserData.tmr.Period = d;
+end
+end
+
+function speedup(hObject, ~)
+f = ancestor(hObject,"figure","toplevel");
+f.UserData.idelay = ...
+    min(f.UserData.idelay + 1, numel(f.UserData.delayValue));
+setDelay(f);
+end
+
+function slowdown(hObject, ~)
+f = ancestor(hObject,"figure","toplevel");
+f.UserData.idelay = ...
+    max(f.UserData.idelay - 1, 1);
+setDelay(f);
+end
+
+function reset(hObject, ~)
+f = ancestor(hObject,"figure","toplevel");
+f.UserData.idelay = 3;
+setDelay(f);
+end
+
+function setupRange(hObject, ~)
+f = ancestor(hObject,"figure","toplevel");
+f.UserData.ihead  = floor(hObject.Value(1));
+f.UserData.length = ceil(hObject.Value(2)) - floor(hObject.Value(1));
 end
 
 function playpause(hObject, ~)
-    ws = guidata(hObject);
-    switch ws.tmr.Running
-      case 'on'
+ws = ancestor(hObject,"figure","toplevel").UserData;
+switch ws.tmr.Running
+    case 'on'
         stop(ws.tmr);
-        set(ws.ppButton, 'CData', ws.icon.play);
-        
-      case 'off'
+        ws.btnPlayPause.Icon  = "play.png";
+
+    case 'off'
         start(ws.tmr);
-        set(ws.ppButton, 'CData', ws.icon.pause);
-    end
+        ws.btnPlayPause.Icon  = "pause.png";
+end
 end
 
 function showFrame(hObject, ~)
-    ws = guidata(hObject);
-    for i = 1 : numel(ws.data)
-        set(ws.himage{i}, 'CData', ws.data{i}(:, :, ws.fcount, ws.bcount));
-    end
-    set(ws.slider, 'Value', ws.fcount);
-    if isfield(ws, 'prevButton')
-        set(ws.label, 'String', sprintf('ANIM %02d - FRAME %02d', ws.bcount, ws.fcount));
-    else
-        set(ws.label, 'String', sprintf('FRAME %02d', ws.fcount));
-    end
-    if strcmpi(ws.tmr.Running, 'on')
-        ws.fcount = mod(ws.fcount, ws.nframe) + 1;
-    end
-    guidata(hObject, ws);
+f = ancestor(hObject,"figure","toplevel");
+ws = f.UserData;
+for i = 1 : numel(ws.animplayer)
+    ws.animplayer{i}.ImageSource = ...
+        ws.animplayer{i}.UserData(:,:,:,ws.iframe,ws.ianim);
+end
+% Label Information
+ws.label.Text = ws.label.UserData(ws.ianim, ws.iframe);
 end
 
 function playAnim(~, ~, f)
-    showFrame(f);
+f.UserData.iframe = ...
+    mod(f.UserData.iframe - f.UserData.ihead + 1, f.UserData.length) + f.UserData.ihead;
+showFrame(f);
+% Slider Value
+f.UserData.slider.Value = f.UserData.iframe;
+end
+
+%% Local Functions
+function data = animExpand(data)
+szinfo = size(data);
+data = reshape(data, [szinfo(1:2), 1, szinfo(3:end)]);
+data = repmat(data, 1, 1, 3);
 end
