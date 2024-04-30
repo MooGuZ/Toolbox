@@ -10,13 +10,13 @@ function anim2gif(anim,varargin)
 p = inputParser;
 % set up parameters
 p.addRequired('anim', ...
-    @(x) isnumeric(x) && isreal(x));
-p.addOptional('FileName',[datestr(now),'.gif'],@isstr);
-p.addParamValue('FrameSize',floor(sqrt(size(anim,1)))*[1,1], ...
+    @(x) isa(x,'DataPackage') || (isnumeric(x) && isreal(x)));
+p.addOptional('FileName',[string(datetime()),'.gif'], @(x) ischar(x) || isa(x, 'string'));
+p.addParamValue('FrameSize', nan, ...
     @(x) isnumeric(x) && isreal(x) && isvector(x));
 p.addParamValue('Normalization',false, ...
     @(x) islogical(x) && isscalar(x));
-p.addParamValue('FrameRate',23.97, ...
+p.addParamValue('FrameRate',25, ...
     @(x) isnumeric(x) && isreal(x) && isscalar(x));
 % input parsing
 p.parse(anim,varargin{:});
@@ -25,6 +25,18 @@ fname  = p.Results.FileName;
 sz     = p.Results.FrameSize;
 swNorm = p.Results.Normalization;
 delay  = 1 / p.Results.FrameRate;
+% inference frame size if necessary
+if isnan(p.Results.FrameSize)
+    if isa(anim, 'DataPackage')
+        sz = anim.smpsize;
+    else
+        sz = floor(sqrt(size(anim,1)))*[1,1];
+    end
+end
+% unpack DataPackage if necessary
+if isa(anim, 'DataPackage')
+    anim = vec(anim.data, 2);
+end
 % check availability of animation
 switch numel(size(anim))
     case 2

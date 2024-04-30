@@ -17,7 +17,7 @@ function [r, c] = arrange(n)
 %  3. When condition of step 2 can't be satisfied. If R x C = N, return
 %  current value. If not return R = R + 1, and C = C - 1.
 %
-%  Because, each interation in step 2 would decrease value of R x C by C -
+%  Because, each iteration in step 2 would decrease value of R x C by C -
 %  R + 1. This create an arithmetic progression. The implementation uses a
 %  formula to get number of steps needed before stop the procedure in a 
 %  parametric fashion.

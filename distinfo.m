@@ -19,6 +19,6 @@ if usegui
     hist(data(:), nbins);
     title(dname);
 else
-    fprintf('%s >> MEAN:%-8.2e\tVAR:%-8.2e\tMAX:%-8.2e\tMIN:%-8.2e\n', ...
-        dname, mean(data(:)), var(data(:)), max(data(:)), min(data(:)));
+    fprintf('%s >> MEAN:%-8.2e STD:%-8.2e  MAX:%-8.2e MIN:%-8.2e\n', ...
+        dname, mean(data(:),"omitmissing"), std(data(:), "omitmissing"), max(data(:)), min(data(:)));
 end
