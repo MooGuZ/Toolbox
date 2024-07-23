@@ -2,7 +2,7 @@ function distinfo(data, dname, usegui)
 % DISTINFO show distribution information of given data
 %
 % [OPTION]
-%   USEGUI: use gui interface to show the distribution information. Decided
+%   USEGUI: use GUI interface to show the distribution information. Decided
 %           by whether or not GUI module is available in current
 %           environment.
 if not(exist('usegui', 'var'))
@@ -14,9 +14,8 @@ if not(exist('dname', 'var'))
 end
 
 if usegui
-    nbins = min(max(numel(data) / 100, 10), 1000);
-    figure();
-    hist(data(:), nbins);
+    nbins = round(min(max(numel(data) / 100, 10), 1000));
+    histogram(data(:), nbins);
     title(dname);
 else
     fprintf('%s >> MEAN:%-8.2e STD:%-8.2e  MAX:%-8.2e MIN:%-8.2e\n', ...

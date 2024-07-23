@@ -70,7 +70,7 @@ if swColor
 else
     [I,cmap] = gray2ind(anim,256);
 end
-% write gif file
+% write GIF file
 imwrite(reshape(I,[sz,1,nframe]),cmap,fname,'gif','DelayTime',delay,'Loopcount', inf);
 
 end

@@ -16,6 +16,11 @@ arguments (Repeating)
     data
 end
 
+% back-compatible
+if iscell(data{1})
+    data = data{1};
+end
+
 % Regularize Data into Cell of Matrix
 for i = 1 : numel(data)
     if isstruct(data{i}) || isa(data{i}, 'DataPackage')
